@@ -420,7 +420,7 @@ WebApp.addRuntimeConfigHook = function(callback) {
   return runtimeConfig.hooks.register(callback);
 };
 
-function getBoilerplateAsync(request, arch) {
+function getBoilerplateAsync(request, arch, { response, headers }) {
   let boilerplate = boilerplateByArch[arch];
   runtimeConfig.hooks.forEach(hook => {
     const meteorRuntimeConfig = hook({
@@ -452,7 +452,7 @@ function getBoilerplateAsync(request, arch) {
     promise = promise
       .then(() => {
         const callback = boilerplateDataCallbacks[key];
-        return callback(request, data, arch);
+        return callback(request, data, arch, { response, headers });
       })
       .then(result => {
         // Callbacks should return false if they did not make any changes.
@@ -462,11 +462,7 @@ function getBoilerplateAsync(request, arch) {
       });
   });
 
-  return promise.then(() => ({
-    stream: boilerplate.toHTMLStream(data),
-    statusCode: data.statusCode,
-    headers: data.headers,
-  }));
+  return promise.then(() => boilerplate.toHTMLStream(data));
 }
 
 /**
@@ -1273,28 +1269,7 @@ function runWebAppServer() {
       // Promise that will be resolved when the program is unpaused.
       await WebApp.clientPrograms[arch].paused;
 
-      return getBoilerplateAsync(request, arch)
-        .then(({ stream, statusCode, headers: newHeaders }) => {
-          if (!statusCode) {
-            statusCode = res.statusCode ? res.statusCode : 200;
-          }
-
-          if (newHeaders) {
-            Object.assign(headers, newHeaders);
-          }
-
-          res.writeHead(statusCode, headers);
-
-          stream.pipe(res, {
-            // End the response when the stream ends.
-            end: true,
-          });
-        })
-        .catch(error => {
-          Log.error('Error running template: ' + error.stack);
-          res.writeHead(500, headers);
-          res.end();
-        });
+      return getBoilerplateAsync(request, arch, { response: res, headers });
     }
   });
 
@@ -1365,7 +1340,7 @@ function runWebAppServer() {
    * @locus Server
    * @summary Starts the HTTP server.
    *  If `UNIX_SOCKET_PATH` is present Meteor's HTTP server will use that socket file for inter-process communication, instead of TCP.
-   * If you choose to not include webapp package in your application this method still must be defined for your Meteor application to work. 
+   * If you choose to not include webapp package in your application this method still must be defined for your Meteor application to work.
    */
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up

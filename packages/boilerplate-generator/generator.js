@@ -66,31 +66,50 @@ export class Boilerplate {
   // by 'webapp' to specify data that is only known at request-time).
   // this returns a stream
   toHTMLStream(extraData) {
-    if (!this.baseData || !this.headTemplate || !this.closeTemplate) {
-      throw new Error('Boilerplate did not instantiate correctly.');
-    }
+    try {
+      if (!this.baseData || !this.headTemplate || !this.closeTemplate) {
+        throw new Error('Boilerplate did not instantiate correctly.');
+      }
 
-    const data = {...this.baseData, ...extraData};
-    const start = "<!DOCTYPE html>\n" + this.headTemplate(data);
+      const data = { ...this.baseData, ...extraData };
+      const { body, dynamicBody, headers, response, responseCallback } = data;
+      let { statusCode } = data;
 
-    const { body, dynamicBody } = data;
+      const start = "<!DOCTYPE html>\n" + this.headTemplate(data);
 
-    const end = this.closeTemplate(data);
-    const response = createStream();
+      const end = this.closeTemplate(data);
+      const stream = createStream();
 
-    appendToStream(start, response);
+      appendToStream(start, stream);
 
-    if (body) {
-      appendToStream(body, response);
-    }
+      if (body) {
+        appendToStream(body, stream);
+      }
 
-    if (dynamicBody) {
-      appendToStream(dynamicBody, response);
-    }
+      if (dynamicBody) {
+        appendToStream(dynamicBody, stream);
+      }
 
-    appendToStream(end, response);
+      appendToStream(end, stream);
 
-    return response;
+      // pipe output
+      if (!statusCode) {
+        statusCode = response.statusCode ? response.statusCode : 200;
+      }
+
+      response.writeHead(statusCode, headers);
+
+      stream.pipe(response, {
+        // End the response when the stream ends.
+        end: true,
+      });
+    } catch (error) {
+      const { headers, response } = extraData;
+
+      Log.error('Error running template: ' + error.stack);
+      response.writeHead(500, headers);
+      response.end();
+    };
   }
 
   // XXX Exported to allow client-side only changes to rebuild the boilerplate

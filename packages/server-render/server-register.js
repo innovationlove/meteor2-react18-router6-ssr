@@ -7,7 +7,7 @@ import { onPageLoad } from "./server.js";
 
 WebAppInternals.registerBoilerplateDataCallback(
   "meteor/server-render",
-  (request, data, arch) => {
+  (request, data, arch, { response, headers }) => {
     const sink = new ServerSink(request, arch);
 
     return onPageLoad.chain(
@@ -96,6 +96,13 @@ WebAppInternals.registerBoilerplateDataCallback(
         data.headers = sink.responseHeaders;
         reallyMadeChanges = true;
       }
+
+      if (sink.reponseCallback) {
+        data.responseCallback = sink.responseCallback;
+      }
+
+      Object.assign(data.headers, headers);
+      data.response = response;
 
       return reallyMadeChanges;
     });

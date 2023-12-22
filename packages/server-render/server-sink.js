@@ -8,6 +8,8 @@ export class ServerSink {
     this.maybeMadeChanges = false;
     this.statusCode = null;
     this.responseHeaders = {};
+    this.reponseCallback = null;
+
   }
 
   appendToHead(html) {
@@ -57,6 +59,12 @@ export class ServerSink {
   getCookies() {
     return this.request.cookies;
   }
+
+  setResponseCallback(callback) {
+    if (typeof callback === 'function') {
+      this.reponseCallback = callback;
+    }
+  }
 }
 
 export function isReadable(stream) {
@@ -85,6 +93,6 @@ function appendContent(object, property, content) {
   } else if ((content = content && content.toString("utf8"))) {
     object[property] = (object[property] || "") + content;
     madeChanges = true;
-  } 
+  }
   return madeChanges;
 }
