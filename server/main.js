@@ -1,5 +1,12 @@
 import { Meteor } from 'meteor/meteor';
+import { onPageLoad } from "meteor/server-render";
+
+import React from "react";
+import { renderToString } from "react-dom/server";
+import { StaticRouter } from "react-router-dom/server";
+
 import { LinksCollection } from '/imports/api/links';
+import { App } from '../imports/ui/App';
 
 async function insertLink({ title, url }) {
   await LinksCollection.insertAsync({ title, url, createdAt: new Date() });
@@ -48,5 +55,16 @@ Meteor.startup(async () => {
   });
 
   // Server Render
+  onPageLoad((sink) => {
+    const Content = (
+      <StaticRouter location={sink.request.url}>
+        <App />
+      </StaticRouter>
+    );
 
+    sink.renderIntoElementById(
+      "react-target",
+      renderToString(Content)
+    );
+  });
 });
