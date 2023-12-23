@@ -2,7 +2,7 @@ import { Meteor } from 'meteor/meteor';
 import { onPageLoad } from "meteor/server-render";
 
 import React from "react";
-import { renderToString } from "react-dom/server";
+import { renderToNodeStream } from "react-dom/server";
 import { StaticRouter } from "react-router-dom/server";
 
 import { LinksCollection } from '/imports/api/links';
@@ -62,9 +62,6 @@ Meteor.startup(async () => {
       </StaticRouter>
     );
 
-    sink.renderIntoElementById(
-      "react-target",
-      renderToString(Content)
-    );
+    sink.renderIntoElementById("react-target", renderToNodeStream(Content));
   });
 });
